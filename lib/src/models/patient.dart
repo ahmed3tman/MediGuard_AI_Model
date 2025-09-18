@@ -1,10 +1,9 @@
 class Patient {
   String name;
   int? age;
-  String? gender;
   String? bloodType;
   bool hasChronic;
-  List<String> chronicDiseases;
+  String? chronicDetails;
   String? notes;
   String? ecg;
   String? bloodPressure;
@@ -12,13 +11,13 @@ class Patient {
   String? respiratoryRate;
   String? heartRate;
   String? temperature;
+
   Patient({
     this.name = '',
     this.age,
-    this.gender,
     this.bloodType,
     this.hasChronic = false,
-    List<String>? chronicDiseases,
+    this.chronicDetails,
     this.notes,
     this.ecg,
     this.bloodPressure,
@@ -26,5 +25,5 @@ class Patient {
     this.respiratoryRate,
     this.heartRate,
     this.temperature,
-  }) : chronicDiseases = chronicDiseases ?? [];
-}
+  });
+}         
