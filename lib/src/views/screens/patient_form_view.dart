@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:mediguard_ai_model/src/viewmodels/patient_viewmodel.dart';
 import 'package:provider/provider.dart';
+import '../../viewmodels/patient_viewmodel.dart';
+import '../../widgets/custom_action_button.dart';
+import '../../widgets/small_fields.dart';
 
 class PatientFormView extends StatefulWidget {
   const PatientFormView({super.key});
@@ -23,7 +25,7 @@ class _PatientFormViewState extends State<PatientFormView> {
   final _rrCtrl = TextEditingController();
   final _tempCtrl = TextEditingController();
 
-  @override
+  @override    
   void dispose() {
     _nameCtrl.dispose();
     _ageCtrl.dispose();
@@ -234,13 +236,16 @@ class _PatientFormViewState extends State<PatientFormView> {
                         Row(
                           children: [
                             Expanded(
-                              child: _smallFieldFlexible('ECG', _ecgCtrl),
+                              child: SmallFieldFlexible(
+                                label: 'ECG',
+                                controller: _ecgCtrl,
+                              ),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: _smallFieldFlexible(
-                                'Blood Pressure',
-                                _bpCtrl,
+                              child: SmallFieldFlexible(
+                                label: 'Blood Pressure',
+                                controller: _bpCtrl,
                               ),
                             ),
                           ],
@@ -249,13 +254,16 @@ class _PatientFormViewState extends State<PatientFormView> {
                         Row(
                           children: [
                             Expanded(
-                              child: _smallFieldFlexible('SpO₂', _spo2Ctrl),
+                              child: SmallFieldFlexible(
+                                label: 'SpO₂',
+                                controller: _spo2Ctrl,
+                              ),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: _smallFieldFlexible(
-                                'Heart Rate (bpm)',
-                                _hrCtrl,
+                              child: SmallFieldFlexible(
+                                label: 'Heart Rate (bpm)',
+                                controller: _hrCtrl,
                               ),
                             ),
                           ],
@@ -264,16 +272,16 @@ class _PatientFormViewState extends State<PatientFormView> {
                         Row(
                           children: [
                             Expanded(
-                              child: _smallFieldFlexible(
-                                'Respiratory Rate',
-                                _rrCtrl,
+                              child: SmallFieldFlexible(
+                                label: 'Respiratory Rate',
+                                controller: _rrCtrl,
                               ),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: _smallFieldFlexible(
-                                'Temperature',
-                                _tempCtrl,
+                              child: SmallFieldFlexible(
+                                label: 'Temperature',
+                                controller: _tempCtrl,
                               ),
                             ),
                           ],
@@ -376,29 +384,7 @@ class _PatientFormViewState extends State<PatientFormView> {
     );
   }
 
-  Widget _smallField(String label, TextEditingController ctrl) {
-    return SizedBox(
-      width: 200,
-      child: TextFormField(
-        controller: ctrl,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-        ),
-      ),
-    );
-  }
-
-  Widget _smallFieldFlexible(String label, TextEditingController ctrl) {
-    return TextFormField(
-      controller: ctrl,
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-        isDense: true,
-      ),
-    );
-  }
+  // small field widgets extracted to ../../widgets/small_fields.dart
 
   // Returns a ButtonStyle that visually matches an outlined TextField with a soft background color
   ButtonStyle _outlinedButtonStyle(Color bgColor) {
@@ -413,38 +399,6 @@ class _PatientFormViewState extends State<PatientFormView> {
       ),
       textStyle: const TextStyle(fontSize: 16),
     );
-  }
-
-  // Reusable custom action button widget
-  Widget CustomActionButton({
-    required String label,
-    required IconData icon,
-    required Color bgColor,
-    String? tooltip,
-    bool iconOnly = false,
-    required VoidCallback onPressed,
-  }) {
-    final child =
-        iconOnly
-            ? Icon(icon)
-            : Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [Icon(icon), const SizedBox(width: 8), Text(label)],
-            );
-
-    final button = ElevatedButton(
-      style: _outlinedButtonStyle(bgColor),
-      onPressed: onPressed,
-      child: child,
-    );
-
-    if (tooltip != null) {
-      return Tooltip(
-        message: tooltip,
-        child: SizedBox(height: 48, child: button),
-      );
-    }
-    return SizedBox(height: 48, child: button);
   }
 
   void _fillRandom(PatientViewModel vm) {

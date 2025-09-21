@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../viewmodels/chat_viewmodel.dart';
+import '../../viewmodels/chat_viewmodel.dart';
+import '../../viewmodels/patient_viewmodel.dart';
+import '../../widgets/voice_recorder.dart';
 
 class ChatView extends StatefulWidget {
   const ChatView({super.key});
@@ -22,7 +24,12 @@ class _ChatViewState extends State<ChatView> {
 
   @override
   Widget build(BuildContext context) {
-    final vm = Provider.of<ChatViewModel>(context);
+    final chatVm = Provider.of<ChatViewModel>(context);
+    final patientVm = Provider.of<PatientViewModel>(context);
+
+    // هنا بنجيب اسم المريض من PatientViewModel
+    final patientName =
+        patientVm.patient.name.isNotEmpty ? patientVm.patient.name : "unknown";
 
     return Scaffold(
       appBar: AppBar(title: const Text('Chat')),
@@ -33,13 +40,12 @@ class _ChatViewState extends State<ChatView> {
               child: ListView.builder(
                 controller: _scroll,
                 padding: const EdgeInsets.all(12),
-                itemCount: vm.messages.length,
+                itemCount: chatVm.messages.length,
                 itemBuilder: (context, i) {
-                  final m = vm.messages[i];
+                  final m = chatVm.messages[i];
                   return Align(
-                    alignment: m.isUser
-                        ? Alignment.centerRight
-                        : Alignment.centerLeft,
+                    alignment:
+                        m.isUser ? Alignment.centerRight : Alignment.centerLeft,
                     child: Container(
                       margin: const EdgeInsets.symmetric(vertical: 6),
                       padding: const EdgeInsets.symmetric(
@@ -48,9 +54,10 @@ class _ChatViewState extends State<ChatView> {
                       ),
                       constraints: const BoxConstraints(maxWidth: 520),
                       decoration: BoxDecoration(
-                        color: m.isUser
-                            ? Theme.of(context).colorScheme.primary
-                            : Colors.grey[200],
+                        color:
+                            m.isUser
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.grey[200],
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -77,13 +84,20 @@ class _ChatViewState extends State<ChatView> {
                         border: OutlineInputBorder(),
                         isDense: true,
                       ),
-                      onSubmitted: (_) => _send(vm),
+                      onSubmitted: (_) => _send(chatVm, patientName),
                     ),
+                  ),
+                  const SizedBox(width: 8),
+                  VoiceRecorder(
+                    onRecorded: (filePath) {
+                      // Send the recorded audio file path to the viewmodel
+                      chatVm.sendAudio(filePath, patientName: patientName);
+                    },
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
                     key: const Key('sendButton'),
-                    onPressed: () => _send(vm),
+                    onPressed: () => _send(chatVm, patientName),
                     child: const Icon(Icons.send),
                   ),
                 ],
@@ -95,15 +109,18 @@ class _ChatViewState extends State<ChatView> {
     );
   }
 
-  void _send(ChatViewModel vm) {
+  void _send(ChatViewModel chatVm, String patientName) {
     final text = _ctrl.text.trim();
     if (text.isEmpty) return;
-    vm.send(text);
+
+    chatVm.send(text, patientName: patientName);
     _ctrl.clear();
+
     Future.delayed(const Duration(milliseconds: 50), () {
       _scroll.animateTo(
         _scroll.position.maxScrollExtent + 80,
         duration: const Duration(milliseconds: 250),
+
         curve: Curves.easeOut,
       );
     });
