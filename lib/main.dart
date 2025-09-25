@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'src/viewmodels/patient_viewmodel.dart';
 import 'src/viewmodels/chat_viewmodel.dart';
-import 'src/views/screens/patient_form_view.dart';
-import 'src/views/screens/chat_view.dart';
+import 'src/views/screens/patient_form_view.dart' as patient_screen;
+import 'src/views/screens/chat_view.dart' as chat_screen;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: "assets/.env");
   runApp(const MediguardApp());
-}    
+}
+
         
 class MediguardApp extends StatelessWidget {
   const MediguardApp({super.key});
@@ -29,12 +33,12 @@ class MediguardApp extends StatelessWidget {
         ),
         initialRoute: '/',
         routes: {
-          '/': (context) => const PatientFormView(),
-          '/chat': (context) => const ChatView(),
+          '/': (context) => const patient_screen.PatientFormView(),
+          '/chat': (context) => const chat_screen.ChatView(),
         },
         onUnknownRoute: (settings) {
           return MaterialPageRoute(
-            builder: (context) => const PatientFormView(),
+            builder: (context) => const patient_screen.PatientFormView(),
           );
         },
       ),

@@ -1,19 +1,19 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../services/api_config.dart';
 
 class ChatbotApiService {
-  static const String baseUrl = "http://10.0.2.2:5000";
+  static final String baseUrl = ApiConfig.baseUrl;
 
   static Future<String> sendChat(String message, {String patientName = "unknown"}) async {
     final url = Uri.parse("$baseUrl/chat");
-
     try {
       final response = await http.post(
         url,
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "message": message,
-          "patient_id": patientName,  // 🟢 نفس اسم المريض
+          "patient_id": patientName,
         }),
       );
 

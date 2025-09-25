@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/patient_viewmodel.dart';
@@ -15,8 +18,7 @@ class _PatientFormViewState extends State<PatientFormView> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _ageCtrl = TextEditingController();
-  final _chronicCtrl =
-      TextEditingController(); // used as input to add one disease
+  final _chronicCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
   final _ecgCtrl = TextEditingController();
   final _bpCtrl = TextEditingController();
@@ -25,7 +27,9 @@ class _PatientFormViewState extends State<PatientFormView> {
   final _rrCtrl = TextEditingController();
   final _tempCtrl = TextEditingController();
 
-  @override    
+  String? _selectedGender;
+
+  @override
   void dispose() {
     _nameCtrl.dispose();
     _ageCtrl.dispose();
@@ -39,8 +43,6 @@ class _PatientFormViewState extends State<PatientFormView> {
     _tempCtrl.dispose();
     super.dispose();
   }
-
-  String? _selectedGender;
 
   @override
   Widget build(BuildContext context) {
@@ -70,17 +72,19 @@ class _PatientFormViewState extends State<PatientFormView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // ====================
+                    // BASIC INFO
+                    // ====================
                     TextFormField(
                       controller: _nameCtrl,
                       decoration: const InputDecoration(
                         labelText: 'Name',
                         border: OutlineInputBorder(),
                       ),
-                      validator:
-                          (v) =>
-                              (v == null || v.trim().isEmpty)
-                                  ? 'Name is required'
-                                  : null,
+                      validator: (v) =>
+                      (v == null || v.trim().isEmpty)
+                          ? 'Name is required'
+                          : null,
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -95,11 +99,11 @@ class _PatientFormViewState extends State<PatientFormView> {
                             ),
                             keyboardType: TextInputType.number,
                             validator: (v) {
-                              if (v == null || v.trim().isEmpty)
+                              if (v == null || v.trim().isEmpty) {
                                 return 'Age is required';
+                              }
                               final n = int.tryParse(v.trim());
-                              if (n == null || n < 0)
-                                return 'Enter a valid age';
+                              if (n == null || n < 0) return 'Enter valid age';
                               return null;
                             },
                           ),
@@ -112,57 +116,20 @@ class _PatientFormViewState extends State<PatientFormView> {
                               labelText: 'Gender',
                               border: OutlineInputBorder(),
                             ),
-                            items:
-                                const ['Male', 'Female', 'Other']
-                                    .map(
-                                      (s) => DropdownMenuItem(
-                                        value: s,
-                                        child: Text(s),
-                                      ),
-                                    )
-                                    .toList(),
+                            items: const ['Male', 'Female', 'Other']
+                                .map((s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(s),
+                            ))
+                                .toList(),
                             value: _selectedGender ?? vm.patient.gender,
-                            onChanged:
-                                (v) => setState(() => _selectedGender = v),
-                            validator:
-                                (v) =>
-                                    (v == null || v.isEmpty)
-                                        ? 'Gender is required'
-                                        : null,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 2,
-                          child: DropdownButtonFormField<String>(
-                            decoration: const InputDecoration(
-                              labelText: 'Blood Type (optional)',
-                              border: OutlineInputBorder(),
-                            ),
-                            items:
-                                const [
-                                      "A+",
-                                      "A-",
-                                      "B+",
-                                      "B-",
-                                      "AB+",
-                                      "AB-",
-                                      "O+",
-                                      "O-",
-                                    ]
-                                    .map(
-                                      (s) => DropdownMenuItem(
-                                        value: s,
-                                        child: Text(s),
-                                      ),
-                                    )
-                                    .toList(),
-                            value:
-                                vm
-                                    .patient
-                                    .bloodType, // ✅ ده اللي يحدد القيمة المبدئية
-                            onChanged: (v) => vm.updateBloodType(v),
-                            // blood type optional now: no validator
+                            onChanged: (v) => setState(() {
+                              _selectedGender = v;
+                            }),
+                            validator: (v) =>
+                            (v == null || v.isEmpty)
+                                ? 'Gender is required'
+                                : null,
                           ),
                         ),
                       ],
@@ -205,15 +172,14 @@ class _PatientFormViewState extends State<PatientFormView> {
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
-                        children:
-                            vm.patient.chronicDiseases
-                                .map(
-                                  (d) => Chip(
-                                    label: Text(d),
-                                    onDeleted: () => vm.removeChronicDisease(d),
-                                  ),
-                                )
-                                .toList(),
+                        children: vm.patient.chronicDiseases
+                            .map(
+                              (d) => Chip(
+                            label: Text(d),
+                            onDeleted: () => vm.removeChronicDisease(d),
+                          ),
+                        )
+                            .toList(),
                       ),
                       const SizedBox(height: 12),
                     ],
@@ -226,9 +192,23 @@ class _PatientFormViewState extends State<PatientFormView> {
                       maxLines: 3,
                     ),
                     const SizedBox(height: 16),
-                    const Text(
-                      'Medical Readings (optional)',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+
+                    // ====================
+                    // VITALS + UPLOAD FILE
+                    // ====================
+                    Row(
+                      children: [
+                        const Text(
+                          'Medical Readings (optional)',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        const Spacer(),
+                        ElevatedButton.icon(
+                          onPressed: () => _pickFileAndFill(vm),
+                          icon: const Icon(Icons.upload_file),
+                          label: const Text("Upload File"),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     Column(
@@ -289,9 +269,12 @@ class _PatientFormViewState extends State<PatientFormView> {
                       ],
                     ),
                     const SizedBox(height: 20),
+
+                    // ====================
+                    // ACTION BUTTONS
+                    // ====================
                     Row(
                       children: [
-                        // Left column: Random (icon) above Analyze
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -320,7 +303,6 @@ class _PatientFormViewState extends State<PatientFormView> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        // Right column: Save above Open Chat
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -335,27 +317,19 @@ class _PatientFormViewState extends State<PatientFormView> {
                                   vm.updateName(_nameCtrl.text.trim());
                                   vm.updateAge(_ageCtrl.text.trim());
                                   vm.updateGender(
-                                    _selectedGender ?? vm.patient.gender,
-                                  );
+                                      _selectedGender ?? vm.patient.gender);
                                   vm.updateNotes(_notesCtrl.text.trim());
                                   vm.updateReading('ecg', _ecgCtrl.text.trim());
                                   vm.updateReading('bp', _bpCtrl.text.trim());
                                   vm.updateReading('hr', _hrCtrl.text.trim());
-                                  vm.updateReading(
-                                    'spo2',
-                                    _spo2Ctrl.text.trim(),
-                                  );
+                                  vm.updateReading('spo2', _spo2Ctrl.text.trim());
                                   vm.updateReading('rr', _rrCtrl.text.trim());
-                                  vm.updateReading(
-                                    'temp',
-                                    _tempCtrl.text.trim(),
-                                  );
+                                  vm.updateReading('temp', _tempCtrl.text.trim());
                                   vm.save();
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
-                                        'Saved patient: ${vm.patient.name}',
-                                      ),
+                                          'Saved patient: ${vm.patient.name}'),
                                     ),
                                   );
                                 },
@@ -365,15 +339,14 @@ class _PatientFormViewState extends State<PatientFormView> {
                                 label: 'Open Chat',
                                 icon: Icons.chat,
                                 bgColor: Colors.purple.shade50,
-                                onPressed:
-                                    () => Navigator.pushNamed(context, '/chat'),
+                                onPressed: () =>
+                                    Navigator.pushNamed(context, '/chat'),
                               ),
                             ],
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
                   ],
                 ),
               ),
@@ -384,34 +357,79 @@ class _PatientFormViewState extends State<PatientFormView> {
     );
   }
 
-  // small field widgets extracted to ../../widgets/small_fields.dart
-
-  // Returns a ButtonStyle that visually matches an outlined TextField with a soft background color
-  ButtonStyle _outlinedButtonStyle(Color bgColor) {
-    return ElevatedButton.styleFrom(
-      backgroundColor: bgColor,
-      foregroundColor: Colors.black87,
-      elevation: 0,
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(6.0),
-        side: BorderSide(color: Colors.grey.shade400),
-      ),
-      textStyle: const TextStyle(fontSize: 16),
+  // ====================
+  // FILE PICKER
+  // ====================
+  Future<void> _pickFileAndFill(PatientViewModel vm) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['json'],
     );
+    if (result == null) return;
+
+    final file = File(result.files.single.path!);
+    final content = await file.readAsString();
+
+    try {
+      final data = jsonDecode(content) as Map<String, dynamic>;
+
+      setState(() {
+        // ==================== BASIC INFO ====================
+        _nameCtrl.text = data['name']?.toString() ?? '';
+        _ageCtrl.text = data['age']?.toString() ?? '';
+        _selectedGender = data['gender']?.toString();
+        _notesCtrl.text = data['notes']?.toString() ?? '';
+
+        // ==================== VITALS ====================
+        _ecgCtrl.text = data['ecg']?.toString() ?? '';
+        _bpCtrl.text = data['bp']?.toString() ?? '';
+        _hrCtrl.text = data['hr']?.toString() ?? '';
+        _spo2Ctrl.text = data['spo2']?.toString() ?? '';
+        _rrCtrl.text = data['rr']?.toString() ?? '';
+        _tempCtrl.text = data['temp']?.toString() ?? '';
+      });
+
+      // ==================== UPDATE VIEWMODEL ====================
+      vm.updateName(_nameCtrl.text.trim());
+      vm.updateAge(_ageCtrl.text.trim());
+      vm.updateGender(_selectedGender);
+
+      vm.updateNotes(_notesCtrl.text.trim());
+      vm.updateReading('ecg', _ecgCtrl.text.trim());
+      vm.updateReading('bp', _bpCtrl.text.trim());
+      vm.updateReading('hr', _hrCtrl.text.trim());
+      vm.updateReading('spo2', _spo2Ctrl.text.trim());
+      vm.updateReading('rr', _rrCtrl.text.trim());
+      vm.updateReading('temp', _tempCtrl.text.trim());
+
+      // chronic_conditions لو موجودة في الملف
+      if (data['chronic_conditions'] is List) {
+        vm.updateHasChronic(true);
+        for (var d in data['chronic_conditions']) {
+          vm.addChronicDisease(d.toString());
+        }
+      } else {
+        vm.updateHasChronic(false);
+      }
+    } catch (e) {
+      debugPrint("❌ Error parsing file: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Invalid file format")),
+      );
+    }
   }
 
+  // ====================
+  // RANDOM DATA
+  // ====================
   void _fillRandom(PatientViewModel vm) {
-    // Minimal random generator
     final rnd = DateTime.now().millisecondsSinceEpoch % 1000;
     final names = ['Alex', 'Sara', 'Omar', 'Lina', 'John', 'Maya'];
     final genders = ['Male', 'Female', 'Other'];
-    final bloods = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
     final name = names[rnd % names.length];
     final age = 20 + (rnd % 60);
     final gender = genders[rnd % genders.length];
-    final blood = bloods[rnd % bloods.length];
     final ecg = '${60 + (rnd % 40)}';
     final bp = '${100 + (rnd % 40)}/${60 + (rnd % 30)}';
     final hr = '${60 + (rnd % 60)}';
@@ -419,83 +437,180 @@ class _PatientFormViewState extends State<PatientFormView> {
     final rr = '${12 + (rnd % 10)}';
     final temp = '${36 + (rnd % 4)}.${rnd % 10}';
 
-    // Fill controllers
     setState(() {
       _nameCtrl.text = name;
       _ageCtrl.text = age.toString();
       _selectedGender = gender;
-      // blood type optional — set it
-      // update vm directly for chronic list
       _ecgCtrl.text = ecg;
       _bpCtrl.text = bp;
       _hrCtrl.text = hr;
       _spo2Ctrl.text = spo2;
       _rrCtrl.text = rr;
       _tempCtrl.text = temp;
-      _notesCtrl.text = 'Randomly generated patient';
+      _notesCtrl.text = 'Random patient';
     });
 
-    vm.updateName(_nameCtrl.text.trim());
-    vm.updateAge(_ageCtrl.text.trim());
+    vm.updateName(_nameCtrl.text);
+    vm.updateAge(_ageCtrl.text);
     vm.updateGender(_selectedGender);
-    vm.updateBloodType(blood);
-    vm.updateReading('ecg', _ecgCtrl.text.trim());
-    vm.updateReading('bp', _bpCtrl.text.trim());
-    vm.updateReading('hr', _hrCtrl.text.trim());
-    vm.updateReading('spo2', _spo2Ctrl.text.trim());
-    vm.updateReading('rr', _rrCtrl.text.trim());
-    // Ensure the 'hasChronic' flag is true so the UI shows the chronic chips
-    if (!vm.patient.hasChronic) vm.updateHasChronic(true);
-    vm.addChronicDisease('Hypertension');
-    if (rnd % 2 == 0) vm.addChronicDisease('Diabetes');
+    vm.updateReading('ecg', ecg);
+    vm.updateReading('bp', bp);
+    vm.updateReading('hr', hr);
+    vm.updateReading('spo2', spo2);
+    vm.updateReading('rr', rr);
+    vm.updateReading('temp', temp);
   }
+
+  // void _showAnalysisDialog(BuildContext context, Map<String, dynamic> result) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (ctx) {
+  //       final patientData = result.values.first;
+  //
+  //       // 🟢 هنا تحط الكود الجديد بتاع lastAnalysis
+  //       final lastAnalysis = patientData['last_analysis'] ?? {};
+  //
+  //       final ecg = lastAnalysis['ecg_analysis'] ?? {};
+  //       final vitals = lastAnalysis['vital_signs_analysis'] ?? {};
+  //       final combined = lastAnalysis['combined_assessment'] ?? {};
+  //       final recommendations = lastAnalysis['unified_recommendations'] ?? [];
+  //
+  //       final buffer = StringBuffer();
+  //
+  //       // ECG Analysis
+  //       buffer.writeln("❤️ ECG Analysis");
+  //       buffer.writeln("Class: ${ecg['class_name'] ?? 'N/A'}");
+  //       buffer.writeln("Risk Level: ${ecg['risk_level'] ?? 'N/A'}\n");
+  //
+  //       // Vital Signs
+  //       buffer.writeln("📊 Vital Signs");
+  //       final cleaned = vitals['cleaned_vital_signs'] ?? {};
+  //       buffer.writeln("Risk Level: ${vitals['news_analysis']?['total_news_score']} → "
+  //           "${vitals['news_analysis']?['risk_category']?['level']}\n");
+  //
+  //       // Alerts
+  //       buffer.writeln("⚠️ Alerts & Issues");
+  //       final errors = vitals['sensor_errors'] ?? [];
+  //       for (var e in errors) {
+  //         buffer.writeln("${e['sensor']} issue: ${e['error']}");
+  //       }
+  //       for (var f in combined['contributing_factors'] ?? []) {
+  //         buffer.writeln(f);
+  //       }
+  //       buffer.writeln("");
+  //
+  //       return AlertDialog(
+  //         title: const Text("📑 Patient Report"),
+  //         content: SingleChildScrollView(
+  //           child: SelectableText(
+  //             buffer.toString(),
+  //             style: const TextStyle(fontSize: 15, height: 1.4),
+  //           ),
+  //         ),
+  //         actions: [
+  //           TextButton(
+  //             onPressed: () => Navigator.pop(ctx),
+  //             child: const Text("OK"),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
 
   void _showAnalysisDialog(BuildContext context, Map<String, dynamic> result) {
     showDialog(
       context: context,
       builder: (ctx) {
-        final patientData = result.values.first; // يجيب أول patient object
+        final patientData = result.values.first;
+
         final lastAnalysis = patientData['last_analysis'] ?? {};
-
+        final ecg = lastAnalysis['ecg_analysis'] ?? {};
+        final vitals = lastAnalysis['vital_signs_analysis'] ?? {};
         final combined = lastAnalysis['combined_assessment'] ?? {};
-        final recsRaw = lastAnalysis['unified_recommendations'];
+        final recommendations = lastAnalysis['unified_recommendations'] ?? [];
 
-        // unified_recommendations ممكن تكون List أو حاجة تانية
-        final List<String> recs =
-            (recsRaw is List) ? recsRaw.map((e) => e.toString()).toList() : [];
+        final sensorErrors = vitals['sensor_errors'] ?? [];
+        final contributingFactors = combined['contributing_factors'] ?? [];
 
         return AlertDialog(
-          title: const Text("🔎 Analysis Results"),
+          title: const Text("📑 Patient Report"),
           content: SingleChildScrollView(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                ListTile(
-                  leading: const Icon(Icons.warning, color: Colors.orange),
-                  title: Text(
-                    "Risk Level: ${combined['combined_risk_level'] ?? 'N/A'}",
-                  ),
-                  subtitle: Text(
-                    "Alert Color: ${combined['alert_color'] ?? 'N/A'}",
-                  ),
-                ),
-                const Divider(),
-                const Text(
-                  "Recommendations:",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                if (recs.isEmpty) const Text("No recommendations available"),
-                ...recs.map((rec) {
-                  return Card(
-                    child: ListTile(
-                      leading: const Icon(
-                        Icons.check_circle,
-                        color: Colors.green,
-                      ),
-                      title: Text(rec),
+                // ================= ECG =================
+                Card(
+                  elevation: 2,
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("❤️ ECG Analysis",
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold)),
+                        const Divider(),
+                        Text("Class: ${ecg['class_name'] ?? 'N/A'}"),
+                        Text("Risk Level: ${ecg['risk_level'] ?? 'N/A'}"),
+                      ],
                     ),
-                  );
-                }),
+                  ),
+                ),
+
+                // ================= Vital Signs =================
+                Card(
+                  elevation: 2,
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("📊 Vital Signs",
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold)),
+                        const Divider(),
+                        Text(
+                          "Risk Level: ${vitals['news_analysis']?['total_news_score']} → "
+                              "${vitals['news_analysis']?['risk_category']?['level']}",
+                        ),
+                        if (sensorErrors.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          const Text(
+                            "Sensor Issues:",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          ...sensorErrors.map(
+                                  (e) => Text("- ${e['sensor']} issue: ${e['error']}")),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+
+                // ================= Combined Factors =================
+                if (contributingFactors.isNotEmpty)
+                  Card(
+                    elevation: 2,
+                    margin: const EdgeInsets.symmetric(vertical: 6),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text("⚠️ Alerts & Contributing Factors",
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold)),
+                          const Divider(),
+                          ...contributingFactors.map((f) => Text("- $f")),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                // ================= Recommendations =================
               ],
             ),
           ),
