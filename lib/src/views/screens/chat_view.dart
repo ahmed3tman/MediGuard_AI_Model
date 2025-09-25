@@ -703,15 +703,49 @@ class _ChatViewState extends State<ChatView> {
                       ),
                       child: Directionality(
                         textDirection: bubbleDirection,
-                        child: Text(
-                          m.text,
-                          textAlign: TextAlign.start, // start follows direction
-                          style: TextStyle(
-                            color: m.isUser ? Colors.white : Colors.black87,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              m.text,
+                              style: TextStyle(
+                                color: m.isUser ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                            if (m.hasAudio && m.audioPath != null) ...[
+                              const SizedBox(height: 6),
+                              Consumer<ChatViewModel>(builder: (_, vm, __) {
+                                final isCurrent = vm.currentPath == m.audioPath && vm.isPlaying;
+                                return Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(
+                                        isCurrent ? Icons.stop_circle : Icons.play_arrow,
+                                        color: m.isUser ? Colors.white : Colors.black,
+                                        size: 22,
+                                      ),
+                                      onPressed: () {
+                                        if (isCurrent) {
+                                          vm.stopAudio();
+                                        } else {
+                                          vm.playAudio(m.audioPath!);
+                                        }
+                                      },
+                                    ),
+                                    Text(
+                                      "🔊 ${m.isUser ? 'Your Voice' : 'Bot Voice'}",
+                                      style: TextStyle(
+                                        color: m.isUser ? Colors.white : Colors.black87,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }),
+                            ],
+                          ],
                         ),
-                      ),
-                    ),
+                      ),                    ),
                   );
                 },
               ),
